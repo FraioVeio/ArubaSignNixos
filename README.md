@@ -80,6 +80,10 @@ nix run github:FraioVeio/ArubaSignNixos
   scrivibile in `~/.local/share/arubasign`: symlink allo store, più copie reali degli
   eseguibili e dei database. La copia viene ricreata solo quando cambia la versione del pacchetto.
 - Dati e configurazione utente restano in `~/.ArubaSign`, come su altre distribuzioni.
+- Di suo ArubaSign lascia attivi in background il backend Java e il convertitore HID→CCID
+  anche dopo la chiusura della finestra, senza nessuna icona nella tray. Il launcher li
+  termina quando si chiude l'ultima finestra di ArubaSign. Per lasciarli attivi, come
+  nell'installazione originale, avvia l'app con `ARUBASIGN_KEEP_BACKEND=1`.
 
 ## Aggiornamenti interni di ArubaSign
 

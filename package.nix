@@ -8,6 +8,7 @@
   makeWrapper,
   wrapGAppsHook3,
   bash,
+  procps,
   copyDesktopItems,
   makeDesktopItem,
   # Electron runtime
@@ -162,6 +163,7 @@ stdenv.mkDerivation (finalAttrs: {
     install -Dm755 ${./launcher.sh} $out/libexec/arubasign-launcher
     substituteInPlace $out/libexec/arubasign-launcher \
       --subst-var-by bash ${bash} \
+      --subst-var-by procps ${procps} \
       --subst-var-by src $out/opt/arubasign
 
     runHook postInstall

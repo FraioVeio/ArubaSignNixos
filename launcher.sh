@@ -66,4 +66,63 @@ if [[ -n "${NIXOS_OZONE_WL:-}" && -n "${WAYLAND_DISPLAY:-}" ]]; then
   flags+=(--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations)
 fi
 
-exec "$dest/app/lin-x64/ArubaSign" "${flags[@]}" "$@"
+gui="$dest/app/lin-x64/ArubaSign"
+pgrep="@procps@/bin/pgrep"
+pkill="@procps@/bin/pkill"
+
+# The GUI spawns a Java backend (and the HID->CCID converter) that upstream
+# leaves running after the window is closed, with no tray icon to stop it.
+# Stop them once the last ArubaSign window is gone, unless
+# ARUBASIGN_KEEP_BACKEND is set.
+backend_patterns=(
+  "^$dest/asp/lin-x64/ArubaSignPlatform\.exe( |\$)"
+  "^$HOME/\.hsvc_$UID/"
+)
+
+# True if an ArubaSign main (browser) process is still running. Electron
+# helper processes carry --type=... and are ignored. A second launch hands its
+# arguments to the running instance and exits at once, so this keeps the
+# backend alive while another window is still open.
+gui_running() {
+  local line
+  while IFS= read -r line; do
+    [[ "$line" == *--type=* ]] || return 0
+  done < <("$pgrep" -u "$UID" -a -f -- "^$gui( |\$)" || true)
+  return 1
+}
+
+stop_backend() {
+  local p alive
+  for p in "${backend_patterns[@]}"; do
+    "$pkill" -TERM -u "$UID" -f -- "$p" || true
+  done
+  # Give the JVM up to 5 s to run its shutdown hooks, then force it.
+  for _ in {1..50}; do
+    alive=0
+    for p in "${backend_patterns[@]}"; do
+      "$pgrep" -u "$UID" -f -- "$p" >/dev/null && alive=1
+    done
+    ((alive)) || return 0
+    sleep 0.1
+  done
+  for p in "${backend_patterns[@]}"; do
+    "$pkill" -KILL -u "$UID" -f -- "$p" || true
+  done
+}
+
+"$gui" "${flags[@]}" "$@" &
+gui_pid=$!
+trap 'kill -TERM "$gui_pid" 2>/dev/null || true' TERM INT HUP
+
+status=0
+while kill -0 "$gui_pid" 2>/dev/null; do
+  wait "$gui_pid" || status=$?
+done
+
+if [[ -z "${ARUBASIGN_KEEP_BACKEND:-}" ]]; then
+  # Let Electron's helper processes wind down before checking.
+  sleep 1
+  gui_running || stop_backend
+fi
+
+exit "$status"
