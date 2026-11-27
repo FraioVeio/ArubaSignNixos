@@ -81,6 +81,28 @@ nix run github:FraioVeio/ArubaSignNixos
   eseguibili e dei database. La copia viene ricreata solo quando cambia la versione del pacchetto.
 - Dati e configurazione utente restano in `~/.ArubaSign`, come su altre distribuzioni.
 
+## Aggiornamenti interni di ArubaSign
+
+ArubaSign ha un updater interno che scarica versioni più recenti di quella pubblicata come
+`.deb`. Per esempio, con il `.deb` 3.6.0 (interna 25.2.0) propone la 26.6.1. Su NixOS
+l'updater non può funzionare: installerebbe binari non patchati fuori dal controllo di Nix.
+L'avviso però compariva a ogni avvio.
+
+Per questo il pacchetto patcha la GUI (`app.asar`) e nasconde l'avviso e la finestra di
+aggiornamento. Il backend continua a controllare gli aggiornamenti per conto suo, ma la GUI
+li ignora. Per riattivare l'avviso:
+
+```nix
+let p = arubasign.packages.x86_64-linux; in
+p.arubasign.override {
+  arubasign-unwrapped = p.arubasign-unwrapped.override { disableUpdateNotifications = false; };
+}
+```
+
+Per usare una versione più recente bisogna aggiornare il `.deb` nel flake (vedi sotto).
+Se una nuova release cambia il codice patchato, il build si ferma con un errore di
+`substituteInPlace --replace-fail`: in quel caso la patch va aggiornata.
+
 ## Aggiornare la versione
 
 L'URL `ArubaSign-latest-LINUX.deb` non è versionato: quando Aruba pubblica una nuova

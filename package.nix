@@ -3,6 +3,7 @@
   stdenv,
   fetchurl,
   dpkg,
+  asar,
   autoPatchelfHook,
   makeWrapper,
   wrapGAppsHook3,
@@ -42,6 +43,8 @@
   pcsclite,
   freetype,
   fontconfig,
+  # Hide ArubaSign's built-in updater prompt (see README).
+  disableUpdateNotifications ? true,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -57,6 +60,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   nativeBuildInputs = [
     dpkg
+    asar
     autoPatchelfHook
     makeWrapper
     wrapGAppsHook3
@@ -135,6 +139,26 @@ stdenv.mkDerivation (finalAttrs: {
     printf '\n%s\n' "-Dsun.security.smartcardio.library=${lib.getLib pcsclite}/lib/libpcsclite.so.1" \
       >> $asp/ArubaSignPlatform.lap
 
+    ${lib.optionalString disableUpdateNotifications ''
+      # The built-in updater would replace the app outside of Nix, and the
+      # public .deb lags behind what the updater offers, so the prompt shows
+      # up on every start. Neutralise it in the GUI bundle: the update state
+      # is always "NONE" and the backend's download/apply events are ignored.
+      # --replace-fail makes the build stop if a new release changes the code.
+      asar extract $app/resources/app.asar asar-src
+      substituteInPlace asar-src/main.*.js \
+        --replace-fail \
+          'hasUpdate:(yr.update_status||v.Y0S.NONE)!==v.Y0S.NONE,status:yr.update_status||v.Y0S.NONE' \
+          'hasUpdate:!1,status:v.Y0S.NONE' \
+        --replace-fail \
+          's=>{s.data&&this.eventUpdateDownload$.next(s.data)}' \
+          's=>{}' \
+        --replace-fail \
+          's=>{s.data&&this.eventUpdateApply$.next(s.data)}' \
+          's=>{}'
+      asar pack asar-src $app/resources/app.asar
+      rm -rf asar-src
+    ''}
     install -Dm755 ${./launcher.sh} $out/libexec/arubasign-launcher
     substituteInPlace $out/libexec/arubasign-launcher \
       --subst-var-by bash ${bash} \
