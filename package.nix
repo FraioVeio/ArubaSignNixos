@@ -25,7 +25,16 @@
   nspr,
   nss,
   pango,
-  xorg,
+  libx11,
+  libxcomposite,
+  libxdamage,
+  libxext,
+  libxfixes,
+  libxrandr,
+  libxrender,
+  libxtst,
+  libxi,
+  libxcb,
   libGL,
   systemd,
   # JRE / smartcard
@@ -71,16 +80,16 @@ stdenv.mkDerivation (finalAttrs: {
     nspr
     nss
     pango
-    xorg.libX11
-    xorg.libXcomposite
-    xorg.libXdamage
-    xorg.libXext
-    xorg.libXfixes
-    xorg.libXrandr
-    xorg.libXrender
-    xorg.libXtst
-    xorg.libXi
-    xorg.libxcb
+    libx11
+    libxcomposite
+    libxdamage
+    libxext
+    libxfixes
+    libxrandr
+    libxrender
+    libxtst
+    libxi
+    libxcb
     zlib
     pcsclite
   ];
